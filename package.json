@@ -1,0 +1,23 @@
+{
+  "name": "build2",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "vite --config vite.app.config.ts",
+    "preview": "vite preview --config vite.app.config.ts",
+    "build:lib": "npx vite build --config vite.lib.config.ts",
+    "build": "npm run build:lib && npx vite build --config vite.app.config.ts",
+    "postinstall": "chmod +x node_modules/.bin/* || true"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "vite": "^6.3.7"
+  },
+  "dependencies": {
+    "axis-api": "github:gobelins-axis/axis-api"
+  }
+}
