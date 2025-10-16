@@ -4,11 +4,11 @@
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Unity Web Player | GameJame</title>
-    <link rel="shortcut icon" href="TemplateData/favicon.ico">
-    <link rel="stylesheet" href="TemplateData/style.css">
+    <link rel="shortcut icon" href="./TemplateData/favicon.ico">
+    <link rel="stylesheet" href="./TemplateData/style.css">
   </head>
   <body>
-    <script src="dist/axis-bridge.umd.js"></script>
+    <script src="vendor/axis-bridge.umd.js"></script>
     <div id="unity-container" class="unity-desktop">
       <canvas id="unity-canvas" width=960 height=600 tabindex="-1"></canvas>
       <div id="unity-loading-bar">
@@ -52,7 +52,7 @@
         updateBannerVisibility();
       }
 
-      var buildUrl = "/public/Build";
+      var buildUrl = "Build";
       var loaderUrl = `${buildUrl}/ecni 2.loader.js`;
       const config = {
         dataUrl: `${buildUrl}/ecni 2.data.unityweb`,

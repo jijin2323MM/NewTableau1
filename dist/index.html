@@ -4,73 +4,11 @@
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Unity Web Player | GameJame</title>
-    <link rel="shortcut icon" href="/assets/favicon-BgURY3nz.ico">
-    <link rel="stylesheet" crossorigin href="/assets/index-CIVn8WiO.css">
+    <link rel="shortcut icon" href="./assets/favicon-BgURY3nz.ico">
+    <link rel="stylesheet" crossorigin href="./assets/index-CIVn8WiO.css">
   </head>
   <body>
-    <script>
-      // faire pointer le nom attendu par le bundle vers l'objet Axis réel
-      if (!window.__axis__ && window.Axis) window.__axis__ = window.Axis;
-      // si le bundle attend un default export interop
-      if (window.Axis && !window.Axis.default) window.Axis.default = window.Axis;
-    </script>
-
-    <script>
-      // shim pour que le bundle UMD trouve la dépendance "axis-api"
-      // adapte la droite de l'affectation si ton runtime expose un autre nom (Axis, __axis__, ...)
-      window['axis-api'] = window['axis-api'] || window.Axis || window.__axis__ || {};
-      // assurer l'interop default si besoin
-      if (window['axis-api'] && !window['axis-api'].default) window['axis-api'].default = window['axis-api'];
-    </script>
-
-    <script>
-  // shim robuste : assure que global "axis-api" expose registerKeys
-  window['axis-api'] = window['axis-api'] || {};
-  const src = window.Axis || window.__axis__ || window['axis-api'];
-  const real = src && (src.default || src);
-  if (real && typeof real.registerKeys === 'function') {
-    // bind pour préserver le this si nécessaire
-    window['axis-api'].registerKeys = real.registerKeys.bind(real);
-  }
-  // exposer default si besoin
-  if (!window['axis-api'].default) window['axis-api'].default = window['axis-api'];
-</script>
-
-<script>
-  (async function waitAndRegister() {
-    const timeout = 3000;
-    const start = Date.now();
-    // attente courte pour que Axis soit défini
-    while (!window.Axis && !window.__axis__ && !window['axis-api'] && (Date.now() - start) < timeout) {
-      await new Promise(r => setTimeout(r, 50));
-    }
-    const src = window.Axis || window.__axis__ || window['axis-api'];
-    const axis = src && (src.default || src);
-    if (!axis) {
-      console.warn('Axis not found after timeout — registerKeys not called');
-      return;
-    }
-    if (typeof axis.registerKeys !== 'function') {
-      console.warn('Axis found but registerKeys is not a function', axis);
-      return;
-    }
-
-    // reproduit les appels du bundle axis-bridge
-    axis.registerKeys("q","a",1);
-    axis.registerKeys("d","x",1);
-    axis.registerKeys("z","i",1);
-    axis.registerKeys("s","s",1);
-    axis.registerKeys(" ","w",1);
-    axis.registerKeys("ArrowLeft","a",2);
-    axis.registerKeys("ArrowRight","x",2);
-    axis.registerKeys("ArrowUp","i",2);
-    axis.registerKeys("ArrowDown","s",2);
-    axis.registerKeys("Enter","w",2);
-
-    console.log('axis bridge: registerKeys executed');
-  })();
-</script>
-
+    <script src="vendor/axis-bridge.umd.js"></script>
     <div id="unity-container" class="unity-desktop">
       <canvas id="unity-canvas" width=960 height=600 tabindex="-1"></canvas>
       <div id="unity-loading-bar">
@@ -114,7 +52,7 @@
         updateBannerVisibility();
       }
 
-      var buildUrl = "/public/Build";
+      var buildUrl = "Build";
       var loaderUrl = `${buildUrl}/ecni 2.loader.js`;
       const config = {
         dataUrl: `${buildUrl}/ecni 2.data.unityweb`,
