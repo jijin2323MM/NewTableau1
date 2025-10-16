@@ -10,6 +10,185 @@
   <body>
     <script src="vendor/axis-api.js"></script>
     <script src="vendor/axis-bridge.umd.js"></script>
+    <script>
+/* ===== Axis WebGL HOTFIX: full gamepad polling without Unity rebuild ===== */
+(function () {
+  var root = (typeof globalThis!=="undefined"? globalThis :
+             (typeof window!=="undefined"? window :
+             (typeof self!=="undefined"? self : {})));
+
+  // -----------------------------------------------------------------------
+  // Bridge state + helpers
+  // -----------------------------------------------------------------------
+  var bridge = root.__axisBridge || {
+    state: {
+      goName: null,
+      prevButtons: [],
+      axisDetected: false,
+      loopScheduled: false,
+      lastLeft:  { x: 0, y: 0 },
+      lastRight: { x: 0, y: 0 }
+    },
+    log: false,                   // mets true pour voir les logs
+    deadzone: 0.05,               // petite zone morte sur les axes
+    axisEps: 0.01,                // sensibilité de changement avant d'envoyer un event
+    pressThreshold: 0.5,          // bouton analogique considéré comme pressé
+    clamp: function (v) {
+      if (typeof v !== "number" || !isFinite(v)) return 0;
+      if (v >  1) return  1;
+      if (v < -1) return -1;
+      return v;
+    },
+    dz: function (v, dz) {
+      return Math.abs(v) < dz ? 0 : v;
+    },
+    sendToUnity: function (method, payload) {
+      var st = bridge.state;
+      if (!st.goName) { if (bridge.log) console.warn("[Axis hotfix] No target GameObject"); return; }
+      if (typeof SendMessage !== "function") { if (bridge.log) console.warn("[Axis hotfix] SendMessage not ready"); return; }
+      try {
+        var json = payload ? JSON.stringify(payload) : "";
+        SendMessage(st.goName, method, json);
+      } catch (e) {
+        console.error("[Axis hotfix] SendMessage failed:", e);
+      }
+    },
+    // buttons
+    dispatchButtons: function (pad) {
+      var st = bridge.state;
+      var buttons = (pad && pad.buttons) ? pad.buttons : [];
+      for (var i = 0; i < buttons.length; i++) {
+        var btn = buttons[i];
+        var pressed = !!(btn && (btn.pressed || btn.value > bridge.pressThreshold));
+        var prev = !!st.prevButtons[i];
+        if (pressed !== prev) {
+          st.prevButtons[i] = pressed;
+          bridge.sendToUnity(pressed ? "OnAxisKeyDown" : "OnAxisKeyUp", {
+            button: i,
+            value: btn && typeof btn.value === "number" ? btn.value : (pressed ? 1 : 0)
+          });
+        }
+      }
+      // pad absent -> relâche tout
+      if (!pad && st.prevButtons.length) {
+        for (var k = 0; k < st.prevButtons.length; k++) {
+          if (st.prevButtons[k]) {
+            st.prevButtons[k] = false;
+            bridge.sendToUnity("OnAxisKeyUp", { button: k, value: 0 });
+          }
+        }
+      }
+    },
+    // axes
+    dispatchAxes: function (pad) {
+      var st = bridge.state;
+      if (!pad) {
+        if (st.lastLeft.x !== 0 || st.lastLeft.y !== 0) {
+          st.lastLeft = { x: 0, y: 0 };
+          bridge.sendToUnity("OnAxisJoy1", st.lastLeft);
+        }
+        if (st.lastRight.x !== 0 || st.lastRight.y !== 0) {
+          st.lastRight = { x: 0, y: 0 };
+          bridge.sendToUnity("OnAxisJoy2", st.lastRight);
+        }
+        return;
+      }
+      var axes = pad.axes || [];
+      var lX = bridge.clamp(bridge.dz(axes[0] || 0, bridge.deadzone));
+      var lY = bridge.clamp(bridge.dz(axes[1] || 0, bridge.deadzone));
+      var rX = bridge.clamp(bridge.dz(axes[2] || 0, bridge.deadzone));
+      var rY = bridge.clamp(bridge.dz(axes[3] || 0, bridge.deadzone));
+
+      if (Math.abs(lX - st.lastLeft.x) > bridge.axisEps || Math.abs(lY - st.lastLeft.y) > bridge.axisEps) {
+        st.lastLeft = { x: lX, y: lY };
+        bridge.sendToUnity("OnAxisJoy1", st.lastLeft);
+      }
+      if (Math.abs(rX - st.lastRight.x) > bridge.axisEps || Math.abs(rY - st.lastRight.y) > bridge.axisEps) {
+        st.lastRight = { x: rX, y: rY };
+        bridge.sendToUnity("OnAxisJoy2", st.lastRight);
+      }
+    },
+    // main loop
+    updateLoop: function () {
+      var pads = (typeof navigator !== "undefined" && navigator.getGamepads) ? navigator.getGamepads() : null;
+      var pad = null;
+      if (pads) {
+        for (var i = 0; i < pads.length; i++) { if (pads[i]) { pad = pads[i]; break; } }
+      }
+      bridge.dispatchAxes(pad);
+      bridge.dispatchButtons(pad);
+
+      if (typeof requestAnimationFrame === "function") {
+        requestAnimationFrame(bridge.updateLoop);
+      } else {
+        setTimeout(bridge.updateLoop, 16);
+      }
+    }
+  };
+  root.__axisBridge = bridge;
+
+  // -----------------------------------------------------------------------
+  // Minimal LibraryManager + exported functions expected by Unity
+  // (pour que _Axis_Init, send, etc. existent sans rebuild)
+  // -----------------------------------------------------------------------
+  root.LibraryManager = root.LibraryManager || {};
+  root.LibraryManager.library = root.LibraryManager.library || {};
+
+  function Axis_Ensure() { return bridge; }
+  function __axisEnsure() { return bridge; }
+  function ensure()       { return bridge; } // alias au cas où la glue appelle ensure()
+
+  function __axisGetState() { return bridge.state; }
+
+  function Axis_Init(goNamePtr) {
+    try {
+      var goName = (typeof UTF8ToString==="function") ? (UTF8ToString(goNamePtr||0) || "") : (""+goNamePtr);
+      bridge.state.goName = goName || bridge.state.goName || "";
+      if (bridge.log) console.log("[Axis hotfix] Axis_Init for:", bridge.state.goName);
+
+      // Auto-start loop si pas encore lancé
+      if (!bridge.state.loopScheduled) {
+        bridge.state.loopScheduled = true;
+        if (typeof requestAnimationFrame === "function") {
+          requestAnimationFrame(bridge.updateLoop);
+        } else {
+          setTimeout(bridge.updateLoop, 16);
+        }
+      }
+    } catch (e) {
+      console.error("[Axis hotfix] Axis_Init error:", e);
+    }
+  }
+
+  function send(methodPtr, payloadPtr) {
+    try {
+      var method = (typeof UTF8ToString==="function") ? (UTF8ToString(methodPtr||0) || "") : (""+methodPtr);
+      var payloadStr = (typeof UTF8ToString==="function" && payloadPtr) ? UTF8ToString(payloadPtr) : "";
+      var parsed = payloadStr ? JSON.parse(payloadStr) : {};
+      bridge.sendToUnity(method, parsed);
+    } catch (e) {
+      console.error("[Axis hotfix] send error:", e);
+    }
+  }
+
+  // Attache aux exports que la build peut appeler
+  root.LibraryManager.library.Axis_Ensure    = Axis_Ensure;
+  root.LibraryManager.library.__axisEnsure   = __axisEnsure;
+  root.LibraryManager.library.ensure         = ensure;
+  root.LibraryManager.library.__axisGetState = __axisGetState;
+  root.LibraryManager.library.Axis_Init      = Axis_Init;
+  root.LibraryManager.library.send           = send;
+
+  // Helpers debug dans la console
+  root.Axis_Ensure    = Axis_Ensure;
+  root.__axisEnsure   = __axisEnsure;
+  root.__axisGetState = __axisGetState;
+
+  // Optionnel: exposer un toggle de logs
+  root.AxisHotfixLog = function (on) { bridge.log = !!on; console.log("[Axis hotfix] log =", bridge.log); };
+})();
+</script>
+
     <div id="unity-container" class="unity-desktop">
       <canvas id="unity-canvas" width=960 height=600 tabindex="-1"></canvas>
       <div id="unity-loading-bar">
