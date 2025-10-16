@@ -15,7 +15,7 @@ export default defineConfig({
       external: ['axis-api'],
       output: {
         globals: {
-          'axis-api': 'Axis',
+          'axis-api': 'bundle',
         },
       },
     },
