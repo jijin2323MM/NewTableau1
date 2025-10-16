@@ -1,0 +1,34 @@
+0 info it worked if it ends with ok
+1 verbose cli [
+1 verbose cli   'C:\\Users\\franc\\node_modules\\node\\bin\\node.exe',
+1 verbose cli   'C:\\Users\\franc\\node_modules\\npm\\bin\\npm-cli.js',
+1 verbose cli   'run',
+1 verbose cli   'build:lib'
+1 verbose cli ]
+2 info using npm@2.15.12
+3 info using node@v23.11.0
+4 verbose run-script [ 'prebuild:lib', 'build:lib', 'postbuild:lib' ]
+5 info prebuild:lib build2@1.0.0
+6 info build:lib build2@1.0.0
+7 verbose unsafe-perm in lifecycle true
+8 verbose stack TypeError [ERR_INVALID_ARG_VALUE]: The property 'options.env['npm_package_description']' must be a string without null bytes. Received '��#\x00 \x00T\x00a\x00b\x00l\x00e\x00a\x00u\x00x\x00\r\x00 \x00'
+8 verbose stack     at validateArgumentNullCheck (node:child_process:965:11)
+8 verbose stack     at normalizeSpawnArguments (node:child_process:692:7)
+8 verbose stack     at spawn (node:child_process:746:13)
+8 verbose stack     at spawn (C:\Users\franc\node_modules\npm\lib\utils\spawn.js:7:13)
+8 verbose stack     at runCmd_ (C:\Users\franc\node_modules\npm\lib\utils\lifecycle.js:211:14)
+8 verbose stack     at runCmd (C:\Users\franc\node_modules\npm\lib\utils\lifecycle.js:176:5)
+8 verbose stack     at runPackageLifecycle (C:\Users\franc\node_modules\npm\lib\utils\lifecycle.js:138:3)
+8 verbose stack     at Array.<anonymous> (C:\Users\franc\node_modules\npm\node_modules\slide\lib\bind-actor.js:15:8)
+8 verbose stack     at LOOP (C:\Users\franc\node_modules\npm\node_modules\slide\lib\chain.js:15:14)
+8 verbose stack     at chain (C:\Users\franc\node_modules\npm\node_modules\slide\lib\chain.js:20:5)
+9 verbose cwd C:\Users\franc\OneDrive\Documents\pro\ecni 2\NewTableau
+10 error Windows_NT 10.0.26100
+11 error argv "C:\\Users\\franc\\node_modules\\node\\bin\\node.exe" "C:\\Users\\franc\\node_modules\\npm\\bin\\npm-cli.js" "run" "build:lib"
+12 error node v23.11.0
+13 error npm  v2.15.12
+14 error code ERR_INVALID_ARG_VALUE
+15 error The property 'options.env['npm_package_description']' must be a string without null bytes. Received '��#\x00 \x00T\x00a\x00b\x00l\x00e\x00a\x00u\x00x\x00\r\x00 \x00'
+16 error If you need help, you may report this error at:
+16 error     <https://github.com/npm/npm/issues>
+17 verbose exit [ 1, true ]

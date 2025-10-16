@@ -3,7 +3,7 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   build: {
     lib: {
-      entry: 'axis-bridge.js',
+      entry: './axis/axis-bridge.js',
       name: 'AxisBridge',
       fileName: 'axis-bridge',
     },

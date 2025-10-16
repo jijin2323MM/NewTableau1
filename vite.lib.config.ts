@@ -3,13 +3,21 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   build: {
     lib: {
-      entry: 'axis-bridge.js',
+      entry: 'public/axis/axis-bridge.js',
       name: 'AxisBridge',
       fileName: 'axis-bridge',
-      formats: ['umd','es']
+      formats: ['umd', 'es'],
     },
-    // ⚠️ On met la lib directement dans public/vendor
+    // on place la librairie directement dans public/vendor
     outDir: 'public/vendor',
-    emptyOutDir: false
-  }
+    emptyOutDir: false,
+    rollupOptions: {
+      external: ['axis-api'],
+      output: {
+        globals: {
+          'axis-api': 'Axis',
+        },
+      },
+    },
+  },
 });
