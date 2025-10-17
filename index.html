@@ -323,5 +323,36 @@
       document.body.appendChild(script);
 
     </script>
+    <script>
+  // Debug / helper: enable Axis hotfix logs, focus canvas on click,
+  // and report gamepad connect/disconnect + quick getGamepads() check.
+  (function () {
+    try {
+      // Make canvas focusable by keyboard/click (change tabindex to 0)
+      var canvas = document.querySelector("#unity-canvas");
+      if (canvas) canvas.setAttribute("tabindex", "0");
+
+      // Focus canvas when user clicks it (helps some browsers deliver inputs)
+      canvas && canvas.addEventListener("click", function () { canvas.focus(); });
+
+      // Turn on bridge logs (callable from console later too)
+      if (typeof AxisHotfixLog === "function") AxisHotfixLog(true);
+
+      // Helpful gamepad events
+      window.addEventListener("gamepadconnected", function (e) {
+        console.log("gamepadconnected:", e.gamepad);
+      });
+      window.addEventListener("gamepaddisconnected", function (e) {
+        console.log("gamepaddisconnected:", e.gamepad);
+      });
+
+      // One-off dump to console so you can inspect mapping/axes
+      setTimeout(function () {
+        console.log("navigator.getGamepads()", navigator.getGamepads && navigator.getGamepads());
+      }, 1000);
+
+    } catch (err) { console.error("setup debug helpers failed:", err); }
+  })();
+</script>
   </body>
 </html>
