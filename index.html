@@ -9,7 +9,21 @@
   </head>
   <body>
     <script src="vendor/axis-api.js"></script>
-    <script src="vendor/axis-bridge.umd.js"></script>
+
+<script>
+  // expose la vraie impl Axis sous window.Axis pour que Axis_Init / les UMD trouvent l'API
+  (function() {
+    const pkg = window['axis-api'] || (window['axis-api'] && window['axis-api'].default);
+    if (pkg) {
+      // si l'API est sous .default, récupère-la, sinon prends pkg directement
+      window.Axis = pkg.default || pkg;
+      window.__axis__ = window.__axis__ || window.Axis;
+      console.log('Axis shim: Axis exposed', !!window.Axis);
+    }
+  })();
+</script>
+
+<script src="vendor/axis-bridge.umd.js"></script>
     <script>
 /* ===== Axis WebGL HOTFIX: full gamepad polling without Unity rebuild ===== */
 (function () {
