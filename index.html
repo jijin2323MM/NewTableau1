@@ -22,7 +22,7 @@
     }
   })();
 </script>
-
+    
 <script src="vendor/axis-bridge.umd.js"></script>
     <script>
 /* ===== Axis WebGL HOTFIX: full gamepad polling without Unity rebuild ===== */
@@ -247,11 +247,11 @@
       }
 
       var buildUrl = "Build";
-      var loaderUrl = `${buildUrl}/ecni 2.loader.js`;
+      var loaderUrl = `${buildUrl}/test2.loader.js`;
       const config = {
-        dataUrl: `${buildUrl}/ecni 2.data.unityweb`,
-        frameworkUrl:  `${buildUrl}/ecni 2.framework.js.unityweb`,
-        codeUrl: `${buildUrl}/ecni 2.wasm.unityweb`,
+        dataUrl: `${buildUrl}/test2.data.unityweb`,
+        frameworkUrl:  `${buildUrl}/test2.framework.js.unityweb`,
+        codeUrl: `${buildUrl}/test2.wasm.unityweb`,
         streamingAssetsUrl: "StreamingAssets",
         companyName: "Gobelins",
         productName: "GameJam",
@@ -306,6 +306,7 @@
 
       var script = document.createElement("script");
       script.src = loaderUrl;
+      var MyGameInstace = null;
       script.onload = () => {
         createUnityInstance(canvas, config, (progress) => {
           document.querySelector("#unity-progress-bar-full").style.width = 100 * progress + "%";
@@ -314,6 +315,7 @@
                 // document.querySelector("#unity-fullscreen-button").onclick = () => {
                 //   unityInstance.SetFullscreen(1);
                 // };
+                MyGameInstace = unityInstance;
 
               }).catch((message) => {
                 alert(message);
