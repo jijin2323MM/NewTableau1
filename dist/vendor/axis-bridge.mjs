@@ -42,4 +42,24 @@ else {
   e.registerKeys("d", "x", 1), e.registerKeys("z", "i", 1), e.registerKeys("s", "s", 1), e.registerKeys(" ", "w", 1), e.registerKeys("ArrowLeft", "a", 2), e.registerKeys("ArrowRight", "x", 2), e.registerKeys("ArrowUp", "i", 2), e.registerKeys("ArrowDown", "s", 2), e.registerKeys("Enter", "w", 2);
   const s = e.createGamepadEmulator(0);
   a(), e.joystick1.setGamepadEmulatorJoystick(s, 0), e.joystick2.setGamepadEmulatorJoystick(s, 1), e.registerGamepadEmulatorKeys(s, 0, "a", 1), e.registerGamepadEmulatorKeys(s, 1, "x", 1), e.registerGamepadEmulatorKeys(s, 2, "i", 1), e.registerGamepadEmulatorKeys(s, 3, "s", 1);
+  const l = { x: 0, y: 0 }, u = { x: 0, y: 0 };
+  e.joystick1.addEventListener("joystick:move", n), e.joystick2.addEventListener("joystick:move", w);
+  function n(t) {
+    if (!t || !t.position)
+      return;
+    const o = 50;
+    l.x += o * t.position.x, l.y += o * t.position.y;
+    try {
+      const f = window.MyGameInstace || window.unityInstance || null;
+      f && typeof f.SendMessage == "function" ? f.SendMessage("JoystickController", "InputJoystick1MoveHandlerX", t.position.x) : console.warn("[AxisBridge] Unity instance not ready for joystick move");
+    } catch (f) {
+      console.error("[AxisBridge] SendMessage failed for joystick1 move:", f);
+    }
+  }
+  function w(t) {
+    if (!t || !t.position)
+      return;
+    const o = 50;
+    u.x += o * t.position.x, u.y += o * t.position.y;
+  }
 }
