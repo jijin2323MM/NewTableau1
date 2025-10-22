@@ -1,57 +1,64 @@
 import "three";
-class p {
-  constructor(n) {
-    this.world = n, this.input = { left: !1, right: !1 }, this.joystickY = 0, this.isPulledBack = !1, this._onKeyDown = this._onKeyDown.bind(this), this._onKeyUp = this._onKeyUp.bind(this), this.addEvents(), this.getMessage();
+class l {
+  constructor(e) {
+    this.world = e, this.input = { left: !1, right: !1 }, this.joystickY = 0, this.isPulledBack = !1, this._onKeyDown = this._onKeyDown.bind(this), this._onKeyUp = this._onKeyUp.bind(this), this.addEvents(), this.getMessage();
   }
   getMessage() {
-    window.addEventListener("message", (n) => {
-      var s, i, a, d, l, y;
-      const e = n.data;
-      if (!(!e || e.type !== "axis-event")) {
-        if (e.event === "keydown" || e.event === "keyup") {
-          const o = (((s = e.payload) == null ? void 0 : s.key) || "").toLowerCase().match(/^([a-z]+)(\d+)$/);
-          if ((i = e.payload) != null && i.id || (a = e.payload) != null && a.joystick, o && (o[1], parseInt(o[2], 10)), e.event === "keydown") {
-            if (e.payload.key === "a1") {
-              this.input.left = !0, console.log("left down"), console.log("[AxisBridge] bouton a1 déclenché, unityInst:", window.MyGameInstace || window.unityInstance);
-              try {
-                const t = window.MyGameInstace || window.unityInstance || null;
-                console.log("Inst :", t), t && typeof t.SendMessage == "function" ? t.SendMessage("JoystickController", "InputA1") : console.warn("[AxisBridge] instance Unity non prête pour SendMessage");
-              } catch (t) {
-                console.error("[AxisBridge] SendMessage failed:", t);
-              }
-            }
-            e.payload.key === "w2" && (this.input.right = !0, console.log("right down"));
-          } else
-            e.payload.key === "a1" && (this.input.left = !1, console.log("left up")), e.payload.key === "w2" && (this.input.right = !1, console.log("right up"));
-        }
-        if (e.event === "joystick:move" && (((d = e.payload) == null ? void 0 : d.joystick) || ((l = e.payload) == null ? void 0 : l.id) || 1) === 1) {
-          const o = ((y = e.payload) == null ? void 0 : y.position) || { x: 0, y: 0 };
-          this.joystickY = o.y, this.input.left = !0, console.log("joystickmove"), console.log("movement du joystick, unityInst:", window.MyGameInstace || window.unityInstance);
-          try {
-            const t = window.MyGameInstace || window.unityInstance || null;
-            console.log("Inst joystick :", t), t && typeof t.SendMessage == "function" ? (console.log(typeof o.x, o.x), console.log(o.y)) : console.warn("[AxisBridge] instance Unity non prête pour SendMessage");
-          } catch (t) {
-            console.error("[AxisBridge] SendMessage failed:", t);
-          }
-        }
+    window.addEventListener("message", (e) => {
+      const t = e.data;
+      if (!t || t.type !== "axis-event") return;
+      const n = t.payload || {};
+      if (t.event === "keydown" || t.event === "keyup") {
+        const o = this.normalizeKey(n.key), i = o.match(/^([a-z]+)(\d+)$/);
+        let s = n.id || n.joystick || 1;
+        i && (s = parseInt(i[2], 10)), t.event === "keydown" ? this.handleAxisKeyDown(o, s) : this.handleAxisKeyUp(o, s);
       }
+      t.event === "joystick:move" && this.handleJoystickMove(n);
     });
+  }
+  normalizeKey(e) {
+    return typeof e == "string" ? e.toLowerCase() : e == null ? "" : String(e).toLowerCase();
+  }
+  handleAxisKeyDown(e, t) {
+    e === "a1" && (this.input.left = !0, console.log("left down"), console.log("[AxisBridge] bouton a1 déclenché, unityInst:", window.MyGameInstace || window.unityInstance), this.sendUnityMessage("InputA1")), e === "w2" && (this.input.right = !0, console.log("right down"));
+  }
+  handleAxisKeyUp(e, t) {
+    e === "a1" && (this.input.left = !1, console.log("left up")), e === "w2" && (this.input.right = !1, console.log("right up"));
+  }
+  handleJoystickMove(e) {
+    if ((e.joystick || e.id || 1) !== 1) return;
+    const n = e.position || { x: 0, y: 0 };
+    this.joystickY = n.y, this.input.left = !0, console.log("joystickmove"), console.log("movement du joystick, unityInst:", window.MyGameInstace || window.unityInstance);
+    try {
+      const o = window.MyGameInstace || window.unityInstance || null;
+      console.log("Inst joystick :", o), o && typeof o.SendMessage == "function" ? (console.log(typeof n.x, n.x), console.log(n.y)) : console.warn("[AxisBridge] instance Unity non prête pour SendMessage");
+    } catch (o) {
+      console.error("[AxisBridge] SendMessage failed:", o);
+    }
+  }
+  sendUnityMessage(e) {
+    try {
+      const t = window.MyGameInstace || window.unityInstance || null;
+      console.log("Inst :", t), t && typeof t.SendMessage == "function" ? t.SendMessage("JoystickController", e) : console.warn("[AxisBridge] instance Unity non prête pour SendMessage");
+    } catch (t) {
+      console.error("[AxisBridge] SendMessage failed:", t);
+    }
   }
   addEvents() {
     window.addEventListener("keydown", this._onKeyDown), window.addEventListener("keyup", this._onKeyUp);
   }
-  _onKeyDown(n) {
-    n.code === "ArrowLeft" && (this.input.left = !0), n.code === "ArrowRight" && (this.input.right = !0), n.code === "Space" && this.start();
+  _onKeyDown(e) {
+    e.code === "ArrowLeft" && (this.input.left = !0), e.code === "ArrowRight" && (this.input.right = !0), e.code === "Space" && this.start();
   }
-  _onKeyUp(n) {
-    n.code === "ArrowLeft" && (this.input.left = !1), n.code === "ArrowRight" && (this.input.right = !1);
+  _onKeyUp(e) {
+    e.code === "ArrowLeft" && (this.input.left = !1), e.code === "ArrowRight" && (this.input.right = !1);
   }
-  start(n) {
+  start(e) {
   }
   destroy() {
     window.removeEventListener("keydown", this._onKeyDown), window.removeEventListener("keyup", this._onKeyUp);
   }
 }
 export {
-  p as default
+  l as default
 };
