@@ -5,15 +5,19 @@ class l {
   }
   getMessage() {
     window.addEventListener("message", (e) => {
-      const t = e.data;
-      if (!t || t.type !== "axis-event") return;
-      const n = t.payload || {};
-      if (t.event === "keydown" || t.event === "keyup") {
-        const o = this.normalizeKey(n.key), i = o.match(/^([a-z]+)(\d+)$/);
-        let s = n.id || n.joystick || 1;
-        i && (s = parseInt(i[2], 10)), t.event === "keydown" ? this.handleAxisKeyDown(o, s) : this.handleAxisKeyUp(o, s);
+      try {
+        const t = e.data;
+        if (!t || t.type !== "axis-event") return;
+        const n = t.payload || {};
+        if (t.event === "keydown" || t.event === "keyup") {
+          const o = this.normalizeKey(n.key), i = o.match(/^([a-z]+)(\d+)$/);
+          let s = n.id || n.joystick || 1;
+          i && (s = parseInt(i[2], 10)), t.event === "keydown" ? this.handleAxisKeyDown(o, s) : this.handleAxisKeyUp(o, s);
+        }
+        t.event === "joystick:move" && this.handleJoystickMove(n);
+      } catch (t) {
+        console.error("[AxisBridge] message handler failed:", t, e && e.data);
       }
-      t.event === "joystick:move" && this.handleJoystickMove(n);
     });
   }
   normalizeKey(e) {

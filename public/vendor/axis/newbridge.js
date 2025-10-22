@@ -14,29 +14,33 @@ export default class newbridge {
 
     getMessage() {
         window.addEventListener("message", (ev) => {
-            const msg = ev.data;
-            if (!msg || msg.type !== "axis-event") return;
+            try {
+                const msg = ev.data;
+                if (!msg || msg.type !== "axis-event") return;
 
-            const payload = msg.payload || {};
+                const payload = msg.payload || {};
 
-            if (msg.event === "keydown" || msg.event === "keyup") {
-                const normalizedKey = this.normalizeKey(payload.key);
-                const match = normalizedKey.match(/^([a-z]+)(\d+)$/);
-                let controllerId = payload.id || payload.joystick || 1;
+                if (msg.event === "keydown" || msg.event === "keyup") {
+                    const normalizedKey = this.normalizeKey(payload.key);
+                    const match = normalizedKey.match(/^([a-z]+)(\d+)$/);
+                    let controllerId = payload.id || payload.joystick || 1;
 
-                if (match) {
-                    controllerId = parseInt(match[2], 10);
+                    if (match) {
+                        controllerId = parseInt(match[2], 10);
+                    }
+
+                    if (msg.event === "keydown") {
+                        this.handleAxisKeyDown(normalizedKey, controllerId);
+                    } else {
+                        this.handleAxisKeyUp(normalizedKey, controllerId);
+                    }
                 }
 
-                if (msg.event === "keydown") {
-                    this.handleAxisKeyDown(normalizedKey, controllerId);
-                } else {
-                    this.handleAxisKeyUp(normalizedKey, controllerId);
+                if (msg.event === "joystick:move") {
+                    this.handleJoystickMove(payload);
                 }
-            }
-
-            if (msg.event === "joystick:move") {
-                this.handleJoystickMove(payload);
+            } catch (error) {
+                console.error("[AxisBridge] message handler failed:", error, ev && ev.data);
             }
         });
     }
