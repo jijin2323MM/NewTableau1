@@ -75,7 +75,7 @@ export default class newbridge {
                         const inst = window.MyGameInstace || window.unityInstance || null;
                         console.log("Inst joystick :", inst);
                         if (inst && typeof inst.SendMessage === "function") {
-                            console.log(type(pos.x),pos.x);
+                            console.log(typeof pos.x, pos.x);
                             console.log(pos.y);
                         // envoyer le nom de la méthode sans parenthèses
                         // inst.SendMessage("JoystickController", "InputJoystick1MoveHandlerX", pos.x);
