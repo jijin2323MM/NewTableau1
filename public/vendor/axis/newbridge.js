@@ -35,6 +35,7 @@ export default class newbridge {
                         console.log("[AxisBridge] bouton a1 déclenché, unityInst:", window.MyGameInstace || window.unityInstance);
                     try {
                         const inst = window.MyGameInstace || window.unityInstance || null;
+                        console.log("Inst :", inst);
                         if (inst && typeof inst.SendMessage === "function") {
                         // envoyer le nom de la méthode sans parenthèses
                         inst.SendMessage("JoystickController", "InputA1");
@@ -67,6 +68,24 @@ export default class newbridge {
                 if (joystickId === 1) {
                     const pos = msg.payload?.position || { x: 0, y: 0 };
                     this.joystickY = pos.y;
+                    this.input.left = true;
+                    console.log("joystickmove");
+                    console.log("movement du joystick, unityInst:", window.MyGameInstace || window.unityInstance);
+                    try {
+                        const inst = window.MyGameInstace || window.unityInstance || null;
+                        console.log("Inst joystick :", inst);
+                        if (inst && typeof inst.SendMessage === "function") {
+                            console.log(type(pos.x),pos.x);
+                            console.log(pos.y);
+                        // envoyer le nom de la méthode sans parenthèses
+                        // inst.SendMessage("JoystickController", "InputJoystick1MoveHandlerX", pos.x);
+                        // inst.SendMessage("JoystickController", "InputJoystick1MoveHandlerY", pos.y);
+                        } else {
+                        console.warn("[AxisBridge] instance Unity non prête pour SendMessage");
+                        }
+                    } catch (e) {
+                        console.error("[AxisBridge] SendMessage failed:", e);
+                    }
 
                     // // Étape 1 : on détecte que le joystick a été tiré vers l’arrière
                     // if (pos.y < -0.9 && !this.isPulledBack) {
