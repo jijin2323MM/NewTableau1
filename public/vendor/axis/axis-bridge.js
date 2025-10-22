@@ -124,12 +124,8 @@ if (!Axis || typeof Axis.registerKeys !== "function") {
     try {
       const inst = window.MyGameInstace || window.unityInstance || null;
       if (inst && typeof inst.SendMessage === "function") {
-        const xPayload = String(e.position.x);
-        inst.SendMessage("JoystickController", "InputJoystick1MoveHandlerX", xPayload);
+        inst.SendMessage("JoystickController", "InputJoystick1MoveHandlerX", e.position.x);
         inst.SendMessage("JoystickController", "InputJoystick1MoveHandlerY", e.position.y);
-        inst.SendMessage("JoystickController", "InputJoystick1MoveHandler");
-
-
       } else {
         console.warn("[AxisBridge] Unity instance not ready for joystick move");
       }

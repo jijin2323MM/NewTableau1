@@ -13,14 +13,7 @@ else {
     y.x += t * n.position.x, y.y += t * n.position.y;
     try {
       const s = window.MyGameInstace || window.unityInstance || null;
-      if (s && typeof s.SendMessage == "function") {
-        const h = String(n.position.x);
-        const S = String(n.position.y);
-        s.SendMessage("JoystickController", "InputJoystick1MoveHandlerX", h);
-        s.SendMessage("JoystickController", "InputJoystick1MoveHandlerY", S);
-        s.SendMessage("JoystickController", "InputJoystick1MoveHandler");
-      } else
-        console.warn("[AxisBridge] Unity instance not ready for joystick move");
+      s && typeof s.SendMessage == "function" ? (s.SendMessage("JoystickController", "InputJoystick1MoveHandlerX", n.position.x), s.SendMessage("JoystickController", "InputJoystick1MoveHandlerY", n.position.y)) : console.warn("[AxisBridge] Unity instance not ready for joystick move");
     } catch (s) {
       console.error("[AxisBridge] SendMessage failed for joystick1 move:", s);
     }
