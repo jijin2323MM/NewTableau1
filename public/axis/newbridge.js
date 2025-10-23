@@ -14,6 +14,7 @@ export default class newbridge {
 
     getMessage() {
         window.addEventListener("message", (ev) => {
+            console.log("Message reçu dans newbridge:", ev.data);
             try {
                 const msg = ev.data;
                 if (!msg || msg.type !== "axis-event") return;
