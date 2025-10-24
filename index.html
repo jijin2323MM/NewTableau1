@@ -57,7 +57,14 @@
         videoIntro.play();
       }, {once: true});
     }
-  }, 2000); 
+  }, 2000);
+
+  window.addEventListener('keydown', function onFirstKeydown(keyboardEvent) {
+    if(keyboardEvent.code === 'Space' || keyboardEvent.code === 'Enter'){
+      videoIntro.style.display = 'none';
+      document.getElementById('videoWHITEBG').style.display = 'none';
+    }
+  });
 
 
   // -----------------------------------------------------------------------
