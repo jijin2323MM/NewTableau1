@@ -5,12 +5,207 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Unity Web Player | GameJame</title>
     <link rel="shortcut icon" href="./assets/favicon-BgURY3nz.ico">
-    <link rel="stylesheet" crossorigin href="./assets/index-CIVn8WiO.css">
+
+    <link rel="stylesheet" crossorigin href="./assets/index-ClEbtKU4.css">
   </head>
   <body>
     <script src="vendor/axis-api.js"></script>
-    <script src="vendor/axis-bridge.umd.js"></script>
-    <div id="unity-container" class="unity-desktop">
+
+<script>
+  // expose la vraie impl Axis sous window.Axis pour que Axis_Init / les UMD trouvent l'API
+  (function() {
+    const pkg = window['axis-api'] || (window['axis-api'] && window['axis-api'].default);
+    if (pkg) {
+      // si l'API est sous .default, récupère-la, sinon prends pkg directement
+      window.Axis = pkg.default || pkg;
+      window.__axis__ = window.__axis__ || window.Axis;
+      console.log('Axis shim: Axis exposed', !!window.Axis);
+    }
+  })();
+</script>
+    
+<script src="vendor/newbridge.umd.js"></script>
+
+    <script>
+/* ===== Axis WebGL HOTFIX: full gamepad polling without Unity rebuild ===== */
+(function () {
+  var root = (typeof globalThis!=="undefined"? globalThis :
+             (typeof window!=="undefined"? window :
+             (typeof self!=="undefined"? self : {})));
+
+  // -----------------------------------------------------------------------
+  // Bridge state + helpers
+  // -----------------------------------------------------------------------
+  var bridge = root.__axisBridge || {
+    state: {
+      goName: null,
+      prevButtons: [],
+      axisDetected: false,
+      loopScheduled: false,
+      lastLeft:  { x: 0, y: 0 },
+      lastRight: { x: 0, y: 0 }
+    },
+    log: false,                   // mets true pour voir les logs
+    deadzone: 0.05,               // petite zone morte sur les axes
+    axisEps: 0.01,                // sensibilité de changement avant d'envoyer un event
+    pressThreshold: 0.5,          // bouton analogique considéré comme pressé
+    clamp: function (v) {
+      if (typeof v !== "number" || !isFinite(v)) return 0;
+      if (v >  1) return  1;
+      if (v < -1) return -1;
+      return v;
+    },
+    dz: function (v, dz) {
+      return Math.abs(v) < dz ? 0 : v;
+    },
+    sendToUnity: function (method, payload) {
+      var st = bridge.state;
+      if (!st.goName) { if (bridge.log) console.warn("[Axis hotfix] No target GameObject"); return; }
+      if (typeof SendMessage !== "function") { if (bridge.log) console.warn("[Axis hotfix] SendMessage not ready"); return; }
+      try {
+        var json = payload ? JSON.stringify(payload) : "";
+        SendMessage(st.goName, method, json);
+      } catch (e) {
+        console.error("[Axis hotfix] SendMessage failed:", e);
+      }
+    },
+    // buttons
+    dispatchButtons: function (pad) {
+      var st = bridge.state;
+      var buttons = (pad && pad.buttons) ? pad.buttons : [];
+      for (var i = 0; i < buttons.length; i++) {
+        var btn = buttons[i];
+        var pressed = !!(btn && (btn.pressed || btn.value > bridge.pressThreshold));
+        var prev = !!st.prevButtons[i];
+        if (pressed !== prev) {
+          st.prevButtons[i] = pressed;
+          bridge.sendToUnity(pressed ? "OnAxisKeyDown" : "OnAxisKeyUp", {
+            button: i,
+            value: btn && typeof btn.value === "number" ? btn.value : (pressed ? 1 : 0)
+          });
+        }
+      }
+      // pad absent -> relâche tout
+      if (!pad && st.prevButtons.length) {
+        for (var k = 0; k < st.prevButtons.length; k++) {
+          if (st.prevButtons[k]) {
+            st.prevButtons[k] = false;
+            bridge.sendToUnity("OnAxisKeyUp", { button: k, value: 0 });
+          }
+        }
+      }
+    },
+    // axes
+    dispatchAxes: function (pad) {
+      var st = bridge.state;
+      if (!pad) {
+        if (st.lastLeft.x !== 0 || st.lastLeft.y !== 0) {
+          st.lastLeft = { x: 0, y: 0 };
+          bridge.sendToUnity("OnAxisJoy1", st.lastLeft);
+        }
+        if (st.lastRight.x !== 0 || st.lastRight.y !== 0) {
+          st.lastRight = { x: 0, y: 0 };
+          bridge.sendToUnity("OnAxisJoy2", st.lastRight);
+        }
+        return;
+      }
+      var axes = pad.axes || [];
+      var lX = bridge.clamp(bridge.dz(axes[0] || 0, bridge.deadzone));
+      var lY = bridge.clamp(bridge.dz(axes[1] || 0, bridge.deadzone));
+      var rX = bridge.clamp(bridge.dz(axes[2] || 0, bridge.deadzone));
+      var rY = bridge.clamp(bridge.dz(axes[3] || 0, bridge.deadzone));
+
+      if (Math.abs(lX - st.lastLeft.x) > bridge.axisEps || Math.abs(lY - st.lastLeft.y) > bridge.axisEps) {
+        st.lastLeft = { x: lX, y: lY };
+        bridge.sendToUnity("OnAxisJoy1", st.lastLeft);
+      }
+      if (Math.abs(rX - st.lastRight.x) > bridge.axisEps || Math.abs(rY - st.lastRight.y) > bridge.axisEps) {
+        st.lastRight = { x: rX, y: rY };
+        bridge.sendToUnity("OnAxisJoy2", st.lastRight);
+      }
+    },
+    // main loop
+    updateLoop: function () {
+      var pads = (typeof navigator !== "undefined" && navigator.getGamepads) ? navigator.getGamepads() : null;
+      var pad = null;
+      if (pads) {
+        for (var i = 0; i < pads.length; i++) { if (pads[i]) { pad = pads[i]; break; } }
+      }
+      bridge.dispatchAxes(pad);
+      bridge.dispatchButtons(pad);
+
+      if (typeof requestAnimationFrame === "function") {
+        requestAnimationFrame(bridge.updateLoop);
+      } else {
+        setTimeout(bridge.updateLoop, 16);
+      }
+    }
+  };
+  root.__axisBridge = bridge;
+
+  // -----------------------------------------------------------------------
+  // Minimal LibraryManager + exported functions expected by Unity
+  // (pour que _Axis_Init, send, etc. existent sans rebuild)
+  // -----------------------------------------------------------------------
+  root.LibraryManager = root.LibraryManager || {};
+  root.LibraryManager.library = root.LibraryManager.library || {};
+
+  function Axis_Ensure() { return bridge; }
+  function __axisEnsure() { return bridge; }
+  function ensure()       { return bridge; } // alias au cas où la glue appelle ensure()
+
+  function __axisGetState() { return bridge.state; }
+
+  function Axis_Init(goNamePtr) {
+    try {
+      var goName = (typeof UTF8ToString==="function") ? (UTF8ToString(goNamePtr||0) || "") : (""+goNamePtr);
+      bridge.state.goName = goName || bridge.state.goName || "";
+      if (bridge.log) console.log("[Axis hotfix] Axis_Init for:", bridge.state.goName);
+
+      // Auto-start loop si pas encore lancé
+      if (!bridge.state.loopScheduled) {
+        bridge.state.loopScheduled = true;
+        if (typeof requestAnimationFrame === "function") {
+          requestAnimationFrame(bridge.updateLoop);
+        } else {
+          setTimeout(bridge.updateLoop, 16);
+        }
+      }
+    } catch (e) {
+      console.error("[Axis hotfix] Axis_Init error:", e);
+    }
+  }
+
+  function send(methodPtr, payloadPtr) {
+    try {
+      var method = (typeof UTF8ToString==="function") ? (UTF8ToString(methodPtr||0) || "") : (""+methodPtr);
+      var payloadStr = (typeof UTF8ToString==="function" && payloadPtr) ? UTF8ToString(payloadPtr) : "";
+      var parsed = payloadStr ? JSON.parse(payloadStr) : {};
+      bridge.sendToUnity(method, parsed);
+    } catch (e) {
+      console.error("[Axis hotfix] send error:", e);
+    }
+  }
+
+  // Attache aux exports que la build peut appeler
+  root.LibraryManager.library.Axis_Ensure    = Axis_Ensure;
+  root.LibraryManager.library.__axisEnsure   = __axisEnsure;
+  root.LibraryManager.library.ensure         = ensure;
+  root.LibraryManager.library.__axisGetState = __axisGetState;
+  root.LibraryManager.library.Axis_Init      = Axis_Init;
+  root.LibraryManager.library.send           = send;
+
+  // Helpers debug dans la console
+  root.Axis_Ensure    = Axis_Ensure;
+  root.__axisEnsure   = __axisEnsure;
+  root.__axisGetState = __axisGetState;
+
+  // Optionnel: exposer un toggle de logs
+  root.AxisHotfixLog = function (on) { bridge.log = !!on; console.log("[Axis hotfix] log =", bridge.log); };
+})();
+</script>
+
+    <div id="unity-container" style="position: absolute; width: 100%; height: 100%">
       <canvas id="unity-canvas" width=960 height=600 tabindex="-1"></canvas>
       <div id="unity-loading-bar">
         <div id="unity-logo"></div>
@@ -19,11 +214,11 @@
         </div>
       </div>
       <div id="unity-warning"> </div>
-      <div id="unity-footer">
+      <!-- <div id="unity-footer">
         <div id="unity-logo-title-footer"></div>
         <div id="unity-fullscreen-button"></div>
         <div id="unity-build-title">GameJame</div>
-      </div>
+      </div> -->
     </div>
     <script>
       var canvas = document.querySelector("#unity-canvas");
@@ -54,11 +249,11 @@
       }
 
       var buildUrl = "Build";
-      var loaderUrl = `${buildUrl}/ecni.loader.js`;
+      var loaderUrl = `${buildUrl}/ecni 2.loader.js`;
       const config = {
-        dataUrl: `${buildUrl}/ecni.data.unityweb`,
-        frameworkUrl:  `${buildUrl}/ecni.framework.js.unityweb`,
-        codeUrl: `${buildUrl}/ecni.wasm.unityweb`,
+        dataUrl: `${buildUrl}/ecni 2.data.unityweb`,
+        frameworkUrl:  `${buildUrl}/ecni 2.framework.js.unityweb`,
+        codeUrl: `${buildUrl}/ecni 2.wasm.unityweb`,
         streamingAssetsUrl: "StreamingAssets",
         companyName: "Gobelins",
         productName: "GameJam",
@@ -105,22 +300,24 @@
 
       } else {
         // Desktop style: Render the game canvas in a window that can be maximized to fullscreen:
-        canvas.style.width = "960px";
-        canvas.style.height = "600px";
+        canvas.style.width = "100vw";
+        canvas.style.height = "100vh";
       }
 
       document.querySelector("#unity-loading-bar").style.display = "block";
 
       var script = document.createElement("script");
       script.src = loaderUrl;
+      var MyGameInstace = null;
       script.onload = () => {
         createUnityInstance(canvas, config, (progress) => {
           document.querySelector("#unity-progress-bar-full").style.width = 100 * progress + "%";
               }).then((unityInstance) => {
                 document.querySelector("#unity-loading-bar").style.display = "none";
-                document.querySelector("#unity-fullscreen-button").onclick = () => {
-                  unityInstance.SetFullscreen(1);
-                };
+                // document.querySelector("#unity-fullscreen-button").onclick = () => {
+                //   unityInstance.SetFullscreen(1);
+                // };
+                MyGameInstace = unityInstance;
 
               }).catch((message) => {
                 alert(message);
@@ -130,5 +327,122 @@
       document.body.appendChild(script);
 
     </script>
+    <script>
+  // Debug / helper: enable Axis hotfix logs, focus canvas on click,
+  // and report gamepad connect/disconnect + quick getGamepads() check.
+  (function () {
+    try {
+      // Make canvas focusable by keyboard/click (change tabindex to 0)
+      var canvas = document.querySelector("#unity-canvas");
+      if (canvas) canvas.setAttribute("tabindex", "0");
+
+      // Focus canvas when user clicks it (helps some browsers deliver inputs)
+      canvas && canvas.addEventListener("click", function () { canvas.focus(); });
+
+      // Turn on bridge logs (callable from console later too)
+      if (typeof AxisHotfixLog === "function") AxisHotfixLog(true);
+
+      // Helpful gamepad events
+      window.addEventListener("gamepadconnected", function (e) {
+        console.log("gamepadconnected:", e.gamepad);
+      });
+      window.addEventListener("gamepaddisconnected", function (e) {
+        console.log("gamepaddisconnected:", e.gamepad);
+      });
+
+      // One-off dump to console so you can inspect mapping/axes
+      setTimeout(function () {
+        console.log("navigator.getGamepads()", navigator.getGamepads && navigator.getGamepads());
+      }, 1000);
+
+    } catch (err) { console.error("setup debug helpers failed:", err); }
+  })();
+</script>
+<script>
+  // Petit UI et "wake" pour forcer l'activation de la Gamepad API via une interaction utilisateur.
+  (function () {
+    try {
+      // Element UI minimal
+      var container = document.createElement('div');
+      container.style.position = 'fixed';
+      container.style.right = '12px';
+      container.style.bottom = '12px';
+      container.style.zIndex = 9999;
+      container.style.fontFamily = 'sans-serif';
+      container.style.fontSize = '12px';
+
+      var btn = document.createElement('button');
+      btn.textContent = 'Activer manette';
+      btn.style.padding = '6px 10px';
+      btn.style.cursor = 'pointer';
+
+      var info = document.createElement('div');
+      info.style.marginTop = '6px';
+      info.style.color = '#fff';
+      info.style.textShadow = '0 0 2px #000';
+
+      container.appendChild(btn);
+      container.appendChild(info);
+      document.body.appendChild(container);
+
+      function dumpPads() {
+        var pads = navigator.getGamepads && navigator.getGamepads();
+        console.log('navigator.getGamepads()', pads);
+        return pads;
+      }
+
+      // Poll court après interaction pour "réveiller" la manette (quelques secondes)
+      function wakeAndLog() {
+        info.textContent = 'Recherche manette… appuyez sur un bouton de la manette';
+        var tries = 0;
+        var id = setInterval(function () {
+          tries++;
+          var pads = dumpPads();
+          if (pads) {
+            for (var i = 0; i < pads.length; i++) {
+              if (pads[i]) {
+                console.log('Manette détectée:', pads[i]);
+                info.textContent = 'Manette détectée: ' + (pads[i].id || 'unknown');
+                clearInterval(id);
+                return;
+              }
+            }
+          }
+          if (tries > 30) { // ~3s si interval = 100ms
+            clearInterval(id);
+            info.textContent = 'Aucune manette détectée (réessayez après un clic + appui sur un bouton)';
+            console.warn('Aucune manette détectée après wake attempts');
+          }
+        }, 100);
+      }
+
+      btn.addEventListener('click', function () {
+        try {
+          // user gesture: appelle getGamepads une fois + démarre la courte boucle de polling
+          dumpPads();
+          wakeAndLog();
+          // active les logs du hotfix si dispo
+          if (typeof AxisHotfixLog === 'function') AxisHotfixLog(true);
+          // focus canvas aussi
+          var canvas = document.querySelector('#unity-canvas');
+          if (canvas) canvas.focus();
+        } catch (e) { console.error(e); }
+      });
+
+      // Affiche un rappel visuel si un gamepad se connecte via événement natif
+      window.addEventListener('gamepadconnected', function (e) {
+        console.log('gamepadconnected (event):', e.gamepad);
+        info.textContent = 'Gamepad connecté: ' + (e.gamepad.id || 'unknown');
+      });
+      window.addEventListener('gamepaddisconnected', function (e) {
+        console.log('gamepaddisconnected (event):', e.gamepad);
+        info.textContent = 'Gamepad déconnecté';
+      });
+
+    } catch (err) {
+      console.error('wake helper failed', err);
+    }
+  })();
+</script>
   </body>
 </html>
