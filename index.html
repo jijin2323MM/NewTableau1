@@ -8,6 +8,9 @@
     <link rel="stylesheet" href="./TemplateData/style.css">
   </head>
   <body>
+    <video style="width: 100vw; height: 100vh;position: absolute;z-index: 20;" id="videoIntro" autoplay>
+      <source src="./public/anim de début v2.mp4" type="video/mp4">
+    </video>
     <script src="vendor/axis-api.js"></script>
 
 <script>
@@ -31,6 +34,11 @@
   var root = (typeof globalThis!=="undefined"? globalThis :
              (typeof window!=="undefined"? window :
              (typeof self!=="undefined"? self : {})));
+
+  let videoIntro = document.getElementById('videoIntro');
+  videoIntro.addEventListener('ended', function() {
+    videoIntro.style.display = 'none';
+  });
 
   // -----------------------------------------------------------------------
   // Bridge state + helpers
