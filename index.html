@@ -7,10 +7,11 @@
     <link rel="shortcut icon" href="./TemplateData/favicon.ico">
     <link rel="stylesheet" href="./TemplateData/style.css">
   </head>
-  <body>
+  <body style="margin: 0; overflow: hidden;">
     <video style="width: 100vw; height: 100vh;position: absolute;z-index: 20;" id="videoIntro" autoplay>
       <source src="./public/anim de début v2.mp4" type="video/mp4">
-    </video>
+    </video >
+    <div style="width: 100vw; height: 100vh;position: absolute;z-index: 18;background-color: white;" id="videoWHITEBG"></div>
     <script src="vendor/axis-api.js"></script>
 
 <script>
@@ -38,7 +39,26 @@
   let videoIntro = document.getElementById('videoIntro');
   videoIntro.addEventListener('ended', function() {
     videoIntro.style.display = 'none';
+    document.getElementById('videoWHITEBG').style.display = 'none';
   });
+
+
+  setTimeout(function() {
+    //on vérifie si l'autoplay n'a pas fonctionné au bout de 2 secondes
+    if (!videoIntro.paused && !videoIntro.ended) console.log('la vidéo a bien démarré automatiquement');
+    else {
+      document.getElementById('videoWHITEBG').style.cursor = 'pointer';
+      document.getElementById('videoWHITEBG').style.zIndex = '50';
+      document.getElementById('videoWHITEBG').innerHTML = '<div style="position: absolute;top: 50%;left: 50%;transform: translate(-50%, -50%);font-size: 74px;color: black;text-align: center;">CLICK</div>';
+      window.addEventListener('click', function() {
+        //on attend un clic pour lancer la vidéo
+        document.getElementById('videoWHITEBG').style.zIndex = '18';
+        document.getElementById('videoWHITEBG').style.cursor = 'default';
+        videoIntro.play();
+      }, {once: true});
+    }
+  }, 2000); 
+
 
   // -----------------------------------------------------------------------
   // Bridge state + helpers
